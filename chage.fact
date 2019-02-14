@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+# Script required run with root(sudo) access
+# Created by wxrdaniel 02/14/2019
+
+# Epoch timestamp translation
+def delta_day_to_date(delta_day):
+    import datetime
+    calc_date = datetime.datetime(1970,1,1,0,0) + datetime.timedelta(delta_day - 1)
+    return calc_date.strftime("%Y-%m-%d")
+
+def main():
+    shadow = None
+
+    try:
+        f = open('/etc/shadow', 'r')
+    except IOError as err:
+        message = "unable to open /etc/shadow, I/O error(%s): %s" % (err.errno, err.strerror)
+        print message
+
+    for line in f.readlines():
+        line = line.rstrip()
+        fields = line.split(':')
+        if fields[0] == 'root':
+            shadow = dict(zip(
+                ['name', 'pwd', 'lstchg', 'min', 'max',
+                 'warn', 'inact', 'expire', 'flag'],
+                fields
+            ))
+            break
+    f.close()
+
+    last_date = int(shadow['lstchg'])
+    last_change_date = str(delta_day_to_date(last_date))
+
+    if shadow['expire'] == "" and shadow['max'] != "99999":
+        expire_date = last_date + int(shadow['max'])
+        expire_date = str(delta_day_to_date(expire_date))
+    elif shadow['expire'] == "-1":
+        pass
+    elif shadow['expire'] == "" and shadow['max'] == "99999":
+        expire_date = "Never"
+    else:
+        expire_date = int(shadow['expire'])
+        expire_date = str(delta_day_to_date(expire_date))
+
+    output = {}
+    output['ROOT_PWD'] = shadow['pwd']
+    output['ROOT_LASTCHANGE'] = last_change_date
+    output['ROOT_EXPIREDATE'] = expire_date
+
+
+    message = output
+
+    print message
+
+
+main()
